@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Rect
 import android.net.Uri
 import android.provider.Settings
 import android.util.Log
@@ -11,9 +12,9 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.moneymanager.data.local.entity.Transaction
-import com.example.moneymanager.data.repository.TransactionRepository
 import com.example.moneymanager.util.ImageHelper
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,8 +29,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AddExpenseViewModel @Inject constructor(
-    private val imageHelper: ImageHelper,
-    private val transactionRepository: TransactionRepository
+    private val imageHelper: ImageHelper
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(AddExpenseUiState())
@@ -118,31 +118,16 @@ class AddExpenseViewModel @Inject constructor(
                     recognizer.process(image)
                         .addOnSuccessListener { visionText ->
                             Log.d("AddExpenseViewModel", "文字識別成功: ${visionText.text}")
-                            // 簡化處理：直接提取文字並更新 UI 狀態
-                            val extractedText = visionText.text
+                            // 解析發票內容並進入編輯模式
+                            processRecognizedText(visionText)
+                            // 使用公共方法進入圖片編輯模式
+                            Log.d("AddExpenseViewModel", "準備進入圖片編輯模式")
                             
-                            // 嘗試從文字中提取金額（尋找數字格式）
-                            val amountRegex = Regex("\\d+([.,]\\d{1,2})?")
-                            val amountMatches = amountRegex.findAll(extractedText)
-                            
-                            // 如果找到金額，使用第一個匹配項
-                            if (amountMatches.any()) {
-                                val amount = amountMatches.first().value.replace(",", ".")
-                                setAmount(amount)
+                            // 確保在主線程中更新 UI 狀態
+                            viewModelScope.launch {
+                                enterImageEditMode()
+                                Log.d("AddExpenseViewModel", "圖片編輯模式狀態: ${_uiState.value.isInImageEditMode}")
                             }
-                            
-                            // 將照片 URI 和識別的文字添加到備註中
-                            val currentNote = _uiState.value.note
-                            val newNote = if (currentNote.isBlank()) 
-                                "OCR 識別文字: $extractedText" 
-                            else 
-                                "$currentNote\nOCR 識別文字: $extractedText"
-                            setNote(newNote)
-                            
-                            // 更新 UI 狀態
-                            _uiState.update { it.copy(
-                                fullRecognizedText = extractedText
-                            ) }
                         }
                         .addOnFailureListener { e ->
                             // 處理錯誤
@@ -164,6 +149,91 @@ class AddExpenseViewModel @Inject constructor(
         }
     }
     
+    private fun processRecognizedText(visionText: Text) {
+        // 將識別的文字轉換為可選擇的文字塊
+        val textBlocks = visionText.textBlocks.flatMap { block ->
+            block.lines.flatMap { line ->
+                line.elements.map { element ->
+                    TextBlock(
+                        text = element.text,
+                        boundingBox = element.boundingBox ?: Rect(),
+                        isSelected = false,
+                        selectionType = SelectionType.NONE
+                    )
+                }
+            }
+        }
+        
+        // 更新 UI 狀態
+        _uiState.update { it.copy(
+            textBlocks = textBlocks,
+            fullRecognizedText = visionText.text
+        ) }
+    }
+    
+    // 進入圖片編輯模式 - 公共方法，可從 UI 層和內部調用
+    fun enterImageEditMode() {
+        Log.d("AddExpenseViewModel", "進入圖片編輯模式")
+        
+        // 重置選擇狀態
+        val resetBlocks = _uiState.value.textBlocks.map { 
+            it.copy(isSelected = false, selectionType = SelectionType.NONE) 
+        }
+        
+        _uiState.update { it.copy(
+            isInImageEditMode = true,
+            textBlocks = resetBlocks
+        ) }
+        
+        Log.d("AddExpenseViewModel", "圖片編輯模式已設置: ${_uiState.value.isInImageEditMode}")
+        Log.d("AddExpenseViewModel", "文字塊數量: ${_uiState.value.textBlocks.size}")
+    }
+    
+    // 退出圖片編輯模式
+    fun exitImageEditMode() {
+        Log.d("AddExpenseViewModel", "退出圖片編輯模式")
+        _uiState.update { it.copy(
+            isInImageEditMode = false
+        ) }
+        Log.d("AddExpenseViewModel", "圖片編輯模式已關閉: ${_uiState.value.isInImageEditMode}")
+    }
+    
+    // 選擇文字塊
+    fun selectTextBlock(index: Int, selectionType: SelectionType) {
+        val blocks = _uiState.value.textBlocks.toMutableList()
+        if (index >= 0 && index < blocks.size) {
+            // 更新選擇狀態
+            blocks[index] = blocks[index].copy(
+                isSelected = true,
+                selectionType = selectionType
+            )
+            
+            // 根據選擇類型更新相應的字段
+            val selectedText = blocks[index].text
+            when (selectionType) {
+                SelectionType.AMOUNT -> {
+                    // 嘗試清理金額文字（移除非數字字符）
+                    val cleanAmount = selectedText.replace(Regex("[^0-9.]"), "")
+                    setAmount(cleanAmount)
+                }
+                SelectionType.NOTE -> {
+                    // 將選擇的文字添加到備註中
+                    val currentNote = _uiState.value.note
+                    val newNote = if (currentNote.isBlank()) selectedText else "$currentNote $selectedText"
+                    setNote(newNote)
+                }
+                else -> {}
+            }
+            
+            _uiState.update { it.copy(textBlocks = blocks) }
+        }
+    }
+    
+    // 完成編輯
+    fun finishEditing() {
+        exitImageEditMode()
+    }
+    
     fun handlePermissionDenied() {
         _uiState.update { it.copy(showPermissionDeniedDialog = true) }
     }
@@ -179,43 +249,8 @@ class AddExpenseViewModel @Inject constructor(
         context.startActivity(intent)
     }
     
-    fun saveExpense(): Boolean {
-        try {
-            val amountStr = _uiState.value.amount
-            if (amountStr.isBlank()) {
-                return false
-            }
-            
-            val amount = amountStr.toDoubleOrNull() ?: return false
-            val category = _uiState.value.selectedCategory
-            val dateStr = _uiState.value.date
-            val note = _uiState.value.note
-            val imageUri = _uiState.value.imageUri?.toString()
-            
-            // 解析日期
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            val date = dateFormat.parse(dateStr) ?: Date()
-            
-            // 創建交易對象
-            val transaction = Transaction(
-                amount = amount,
-                category = category,
-                date = date,
-                note = note,
-                imageUri = imageUri
-            )
-            
-            // 保存到資料庫
-            viewModelScope.launch {
-                transactionRepository.insertTransaction(transaction)
-                Log.d("AddExpenseViewModel", "交易已保存到資料庫: $transaction")
-            }
-            
-            return true
-        } catch (e: Exception) {
-            Log.e("AddExpenseViewModel", "保存交易失敗", e)
-            return false
-        }
+    fun saveExpense() {
+        // TODO: 保存支出到資料庫
     }
 }
 
@@ -228,5 +263,18 @@ data class AddExpenseUiState(
     val imageUri: Uri? = null,
     val fullRecognizedText: String = "",
     val showPermissionDeniedDialog: Boolean = false,
-    val shouldLaunchCamera: Boolean = false
-) 
+    val shouldLaunchCamera: Boolean = false,
+    val isInImageEditMode: Boolean = false,
+    val textBlocks: List<TextBlock> = emptyList()
+)
+
+data class TextBlock(
+    val text: String,
+    val boundingBox: Rect,
+    val isSelected: Boolean = false,
+    val selectionType: SelectionType = SelectionType.NONE
+)
+
+enum class SelectionType {
+    AMOUNT, NOTE, NONE
+} 

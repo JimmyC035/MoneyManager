@@ -1,9 +1,9 @@
 package com.example.moneymanager.di
 
 import android.content.Context
-import com.example.moneymanager.data.database.AppDatabase
+import androidx.room.Room
+import com.example.moneymanager.data.local.MoneyManagerDatabase
 import com.example.moneymanager.data.local.dao.LoanPlanDao
-import com.example.moneymanager.data.local.dao.TransactionDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -15,19 +15,21 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
     
+    @Provides
     @Singleton
-    @Provides
-    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
-        return AppDatabase.getDatabase(context)
+    fun provideDatabase(
+        @ApplicationContext context: Context
+    ): MoneyManagerDatabase {
+        return Room.databaseBuilder(
+            context,
+            MoneyManagerDatabase::class.java,
+            MoneyManagerDatabase.DATABASE_NAME
+        ).build()
     }
     
     @Provides
-    fun provideTransactionDao(database: AppDatabase): TransactionDao {
-        return database.transactionDao()
-    }
-    
-    @Provides
-    fun provideLoanPlanDao(database: AppDatabase): LoanPlanDao {
+    @Singleton
+    fun provideLoanPlanDao(database: MoneyManagerDatabase): LoanPlanDao {
         return database.loanPlanDao()
     }
 } 

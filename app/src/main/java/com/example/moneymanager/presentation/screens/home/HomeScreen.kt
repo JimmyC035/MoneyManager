@@ -1,11 +1,12 @@
 package com.example.moneymanager.presentation.screens.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -21,14 +22,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.moneymanager.data.local.entity.Transaction
+import com.example.moneymanager.domain.model.Transaction
+import com.example.moneymanager.domain.model.TransactionType
 import com.example.moneymanager.presentation.components.BottomNavBar
-import com.example.moneymanager.presentation.navigation.Screen
+import com.example.moneymanager.presentation.components.BubbleBackground
+import com.example.moneymanager.presentation.components.TransactionItem
+import com.example.moneymanager.presentation.model.Transaction as PresentationTransaction
 import com.example.moneymanager.presentation.screens.expense.AddExpenseDialog
+import com.example.moneymanager.presentation.theme.Primary
 import com.example.moneymanager.util.BudgetMock
 import java.text.NumberFormat
-import java.text.SimpleDateFormat
 import java.util.*
+import com.example.moneymanager.presentation.navigation.Screen
 
 @Composable
 fun HomeScreen(
@@ -36,191 +41,140 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val currentTime = viewModel.currentTime
+    
     var showAddExpenseDialog by remember { mutableStateOf(false) }
     
+    if (showAddExpenseDialog) {
+        AddExpenseDialog(
+            onDismiss = { showAddExpenseDialog = false },
+            onSave = { showAddExpenseDialog = false }
+        )
+    }
+    
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("首頁") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White
-                )
-            )
-        },
+        modifier = Modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = { BottomNavBar(navController = navController, currentRoute = Screen.Home.route) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddExpenseDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = Color.White
+                containerColor = Primary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "新增交易")
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "添加交易",
+                    tint = Color.White
+                )
             }
-        },
-        bottomBar = {
-            BottomNavBar(
-                navController = navController,
-                currentRoute = Screen.Home.route
-            )
         }
     ) { paddingValues ->
-        if (showAddExpenseDialog) {
-            AddExpenseDialog(
-                onDismiss = { showAddExpenseDialog = false },
-                onSave = { showAddExpenseDialog = false }
-            )
-        }
-        
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp)
+                .windowInsetsPadding(WindowInsets.statusBars),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 總金額卡片
             item {
-                Card(
+                // 標題
+                Text(
+                    text = "智能記賬",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                )
+            }
+            
+            item {
+                // 總資產卡片（帶有氣泡背景）
+                BubbleBackground(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
+                        .height(200.dp)
                 ) {
                     Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "總支出",
-                            color = Color.White.copy(alpha = 0.8f),
-                            fontSize = 16.sp
+                            text = "總資產",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium
                         )
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
                         
                         Text(
-                            text = "$ ${String.format("%.2f", uiState.totalAmount)}",
+                            text = formatCurrency(uiState.totalBalance),
                             color = Color.White,
                             fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(vertical = 8.dp)
                         )
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(
+                                    text = "本月收入",
+                                    color = Color.White.copy(alpha = 0.8f),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Text(
+                                    text = formatCurrency(uiState.monthlyIncome),
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            
+                            Column {
+                                Text(
+                                    text = "本月支出",
+                                    color = Color.White.copy(alpha = 0.8f),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Text(
+                                    text = formatCurrency(uiState.monthlyExpense),
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
                     }
                 }
             }
             
-            // 最近交易標題
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "最近交易",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    TextButton(
-                        onClick = { navController.navigate(Screen.Transactions.route) }
-                    ) {
-                        Text("查看全部")
-                    }
-                }
+                // 最近交易標題
+                Text(
+                    text = "最近交易",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                )
             }
             
             // 最近交易列表
-            if (uiState.isLoading) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-            } else if (uiState.recentTransactions.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("沒有交易記錄")
-                    }
-                }
-            } else {
-                items(uiState.recentTransactions) { transaction ->
-                    TransactionItem(transaction)
-                }
+            items(uiState.recentTransactions) { transaction ->
+                TransactionItem(transaction = transaction)
+            }
+            
+            item {
+                BudgetCard(budgets = uiState.budgets)
             }
             
             // 底部空間
             item {
                 Spacer(modifier = Modifier.height(80.dp))
             }
-        }
-    }
-}
-
-@Composable
-fun TransactionItem(transaction: Transaction) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        shape = RoundedCornerShape(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = transaction.category,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                Text(
-                    text = transaction.note.take(50) + if (transaction.note.length > 50) "..." else "",
-                    color = Color.Gray,
-                    fontSize = 14.sp
-                )
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-                Text(
-                    text = dateFormat.format(transaction.date),
-                    color = Color.Gray,
-                    fontSize = 12.sp
-                )
-            }
-            
-            Text(
-                text = "$ ${transaction.amount}",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = Color.Red
-            )
         }
     }
 }
@@ -317,6 +271,39 @@ private fun RecentTransactionsCard(transactions: List<Transaction>) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun TransactionItem(transaction: Transaction) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = transaction.description,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = transaction.category,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
+        Text(
+            text = when (transaction.type) {
+                TransactionType.INCOME -> "+¥ ${formatNumber(transaction.amount)}"
+                TransactionType.EXPENSE -> "-¥ ${formatNumber(transaction.amount)}"
+            },
+            color = when (transaction.type) {
+                TransactionType.INCOME -> Color(0xFF40c057)
+                TransactionType.EXPENSE -> Color(0xFFfa5252)
+            },
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 

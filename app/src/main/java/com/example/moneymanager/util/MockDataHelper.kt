@@ -1,6 +1,7 @@
 package com.example.moneymanager.util
 
-import com.example.moneymanager.data.local.entity.Transaction
+import com.example.moneymanager.domain.model.Transaction
+import com.example.moneymanager.domain.model.TransactionType
 import java.util.Date
 import kotlin.random.Random
 
@@ -9,23 +10,23 @@ object MockDataHelper {
         return listOf(
             Transaction(
                 amount = 8500.0,
-                type = "INCOME",
+                type = TransactionType.INCOME,
                 category = "工資",
-                note = "月薪",
+                description = "月薪",
                 date = Date()
             ),
             Transaction(
                 amount = 45.0,
-                type = "EXPENSE",
+                type = TransactionType.EXPENSE,
                 category = "餐飲",
-                note = "午餐",
+                description = "午餐",
                 date = Date()
             ),
             Transaction(
                 amount = 156.80,
-                type = "EXPENSE",
+                type = TransactionType.EXPENSE,
                 category = "購物",
-                note = "超市購物",
+                description = "超市購物",
                 date = Date()
             )
         )

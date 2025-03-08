@@ -29,7 +29,7 @@ data class LoanPlanEntity(
     val remainingPeriods: Int
 )
 
-class LoanPlanConverters {
+class Converters {
     private val gson = Gson()
     
     @TypeConverter

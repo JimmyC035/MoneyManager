@@ -1,8 +1,8 @@
-package com.example.moneymanager.data.local.dao
+package com.example.moneymanager.data.local
 
 import androidx.room.*
+import com.example.moneymanager.domain.model.Transaction
 import kotlinx.coroutines.flow.Flow
-import com.example.moneymanager.data.local.entity.Transaction
 
 @Dao
 interface TransactionDao {

@@ -3,12 +3,12 @@ package com.example.moneymanager.data.local.entity
 import android.net.Uri
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import androidx.room.TypeConverter
 import androidx.room.TypeConverters
-import com.example.moneymanager.data.local.Converters
 import java.util.Date
 
 @Entity(tableName = "transactions")
-@TypeConverters(Converters::class)
+@TypeConverters(TransactionConverters::class)
 data class Transaction(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -17,6 +17,27 @@ data class Transaction(
     val date: Date,
     val note: String,
     val imageUri: String? = null,
-    val createdAt: Date = Date(),
-    val type: String = "EXPENSE" // 添加 type 字段，默認為 EXPENSE
-) 
+    val createdAt: Date = Date()
+)
+
+class TransactionConverters {
+    @TypeConverter
+    fun fromTimestamp(value: Long?): Date? {
+        return value?.let { Date(it) }
+    }
+
+    @TypeConverter
+    fun dateToTimestamp(date: Date?): Long? {
+        return date?.time
+    }
+    
+    @TypeConverter
+    fun fromString(value: String?): Uri? {
+        return value?.let { Uri.parse(it) }
+    }
+    
+    @TypeConverter
+    fun uriToString(uri: Uri?): String? {
+        return uri?.toString()
+    }
+} 

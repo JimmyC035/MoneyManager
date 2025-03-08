@@ -1,39 +1,15 @@
 package com.example.moneymanager.data.local
 
-import android.net.Uri
 import androidx.room.TypeConverter
 import com.example.moneymanager.presentation.screens.loan.LoanType
 import com.example.moneymanager.presentation.screens.loan.RepaymentItem
 import com.example.moneymanager.presentation.screens.loan.RepaymentMethod
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import java.util.Date
 
 class Converters {
     private val gson = Gson()
     
-    // Transaction Converters
-    @TypeConverter
-    fun fromTimestamp(value: Long?): Date? {
-        return value?.let { Date(it) }
-    }
-
-    @TypeConverter
-    fun dateToTimestamp(date: Date?): Long? {
-        return date?.time
-    }
-    
-    @TypeConverter
-    fun fromString(value: String?): Uri? {
-        return value?.let { Uri.parse(it) }
-    }
-    
-    @TypeConverter
-    fun uriToString(uri: Uri?): String? {
-        return uri?.toString()
-    }
-    
-    // Loan Plan Converters
     @TypeConverter
     fun fromLoanType(value: LoanType): String = value.name
     

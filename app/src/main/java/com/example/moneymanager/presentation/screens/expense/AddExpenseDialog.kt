@@ -90,6 +90,11 @@ fun AddExpenseDialog(
         visible = true
     }
     
+    // 監聽 isInImageEditMode 狀態變化
+    LaunchedEffect(uiState.isInImageEditMode) {
+        Log.d("AddExpenseDialog", "isInImageEditMode 變更: ${uiState.isInImageEditMode}")
+    }
+    
     // 監聽 shouldLaunchCamera 標誌
     LaunchedEffect(key1 = uiState.shouldLaunchCamera) {
         Log.d("AddExpenseDialog", "shouldLaunchCamera 變更: ${uiState.shouldLaunchCamera}")
@@ -110,6 +115,25 @@ fun AddExpenseDialog(
         )
     }
     
+    // 顯示圖片編輯界面
+    if (uiState.isInImageEditMode) {
+        Log.d("AddExpenseDialog", "顯示圖片編輯界面: isInImageEditMode = ${uiState.isInImageEditMode}")
+        
+        // 直接使用 ImageEditScreen 作為根 Composable
+        ImageEditScreen(
+            viewModel = viewModel,
+            onFinish = {
+                Log.d("AddExpenseDialog", "圖片編輯完成")
+                viewModel.exitImageEditMode()
+            }
+        )
+        
+        // 不顯示對話框
+        return
+    } else {
+        Log.d("AddExpenseDialog", "不顯示圖片編輯界面: isInImageEditMode = ${uiState.isInImageEditMode}")
+    }
+    
     Dialog(
         onDismissRequest = {
             visible = false
@@ -125,11 +149,11 @@ fun AddExpenseDialog(
             visible = visible,
             enter = slideInVertically(
                 initialOffsetY = { it },
-                animationSpec = tween(durationMillis = 300)
+                animationSpec = tween(300)
             ),
             exit = slideOutVertically(
                 targetOffsetY = { it },
-                animationSpec = tween(durationMillis = 300)
+                animationSpec = tween(300)
             )
         ) {
             Card(
@@ -344,12 +368,27 @@ fun AddExpenseDialog(
                         // 如果有識別的文字，顯示提示
                         if (uiState.fullRecognizedText.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "已識別文字並自動填充",
-                                color = Primary,
-                                fontSize = 14.sp,
-                                modifier = Modifier.padding(horizontal = 4.dp)
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (uiState.amount.isNotEmpty() || uiState.note.isNotEmpty())
+                                        "已選擇文字作為金額或備註"
+                                    else
+                                        "已識別文字",
+                                    color = Primary,
+                                    fontSize = 14.sp,
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
+                                
+                                TextButton(
+                                    onClick = { viewModel.enterImageEditMode() }
+                                ) {
+                                    Text("重新選擇")
+                                }
+                            }
                         }
                         
                         Spacer(modifier = Modifier.height(16.dp))
@@ -358,15 +397,9 @@ fun AddExpenseDialog(
                     // 確認按鈕
                     Button(
                         onClick = { 
-                            val success = viewModel.saveExpense()
-                            if (success) {
-                                visible = false
-                                onSave()
-                            } else {
-                                // 顯示錯誤提示
-                                // 這裡可以添加一個 Snackbar 或 Toast 提示
-                                Log.e("AddExpenseDialog", "保存失敗，請檢查輸入")
-                            }
+                            viewModel.saveExpense()
+                            visible = false
+                            onSave()
                         },
                         modifier = Modifier
                             .fillMaxWidth()
