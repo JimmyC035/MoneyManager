@@ -27,8 +27,20 @@ data class TransactionEntity(
     
     // 獲取格式化的日期字符串
     fun getFormattedDate(): String {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         return dateFormat.format(date)
+    }
+    
+    // 獲取格式化的創建時間字符串
+    fun getFormattedCreatedTime(): String {
+        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+        return timeFormat.format(createdAt)
+    }
+    
+    // 獲取完整的格式化日期和時間
+    fun getFullFormattedDateTime(): String {
+        val dateTimeFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        return dateTimeFormat.format(createdAt)
     }
     
     // 獲取交易類型的枚舉值

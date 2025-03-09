@@ -154,7 +154,10 @@ fun TransactionsScreen(
             ) {
                 // 今天的交易
                 items(uiState.todayTransactions) { transaction ->
-                    TransactionItem(transaction = transaction)
+                    TransactionItem(
+                        transaction = transaction,
+                        onDelete = { viewModel.deleteTransaction(it) }
+                    )
                 }
                 
                 // 昨天標籤
@@ -169,7 +172,10 @@ fun TransactionsScreen(
                 
                 // 昨天的交易
                 items(uiState.yesterdayTransactions) { transaction ->
-                    TransactionItem(transaction = transaction)
+                    TransactionItem(
+                        transaction = transaction,
+                        onDelete = { viewModel.deleteTransaction(it) }
+                    )
                 }
                 
                 // 底部空間

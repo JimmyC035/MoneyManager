@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.moneymanager.data.local.dao.TransactionDao
 import com.example.moneymanager.data.local.entity.TransactionEntity
 import com.example.moneymanager.data.local.entity.TransactionType
+import com.example.moneymanager.data.repository.TransactionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,7 +18,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TransactionsViewModel @Inject constructor(
-    private val transactionDao: TransactionDao
+    private val transactionRepository: TransactionRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TransactionsUiState())
@@ -35,61 +36,20 @@ class TransactionsViewModel @Inject constructor(
 
     private fun loadTransactions() {
         viewModelScope.launch {
-            // 在實際應用中，這裡應該從 transactionDao 獲取數據
-            // 目前仍使用模擬數據
-            val todayTransactions = listOf(
-                TransactionEntity(
-                    id = 1,
-                    title = "午餐",
-                    amount = 45.0,
-                    date = Date(),
-                    category = "餐飲",
-                    type = TransactionType.EXPENSE.name
-                ),
-                TransactionEntity(
-                    id = 2,
-                    title = "咖啡",
-                    amount = 28.0,
-                    date = Date(),
-                    category = "咖啡",
-                    type = TransactionType.EXPENSE.name
-                )
-            )
-            
-            val yesterdayTransactions = listOf(
-                TransactionEntity(
-                    id = 3,
-                    title = "超市購物",
-                    amount = 156.5,
-                    date = Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000), // 昨天
-                    category = "購物",
-                    type = TransactionType.EXPENSE.name
-                ),
-                TransactionEntity(
-                    id = 4,
-                    title = "薪資",
-                    amount = 8500.0,
-                    date = Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000), // 昨天
-                    category = "收入",
-                    type = TransactionType.INCOME.name
-                )
-            )
-            
-            _uiState.value = TransactionsUiState(
-                todayTransactions = todayTransactions,
-                yesterdayTransactions = yesterdayTransactions
-            )
-            
-            // 下面是從數據庫獲取數據的示例代碼，目前被注釋掉
-            /*
-            transactionDao.getAllTransactions().collectLatest { entities ->
-                // 這裡需要根據日期將交易分為今天和昨天
+            transactionRepository.allTransactions.collectLatest { entities ->
+                // 根據日期將交易分為今天和昨天
                 val calendar = Calendar.getInstance()
                 val today = calendar.get(Calendar.DAY_OF_YEAR)
                 val todayEntities = mutableListOf<TransactionEntity>()
                 val yesterdayEntities = mutableListOf<TransactionEntity>()
                 
-                entities.forEach { entity ->
+                // 確保按日期和創建時間排序
+                val sortedEntities = entities.sortedWith(
+                    compareByDescending<TransactionEntity> { it.date }
+                        .thenByDescending { it.createdAt }
+                )
+                
+                sortedEntities.forEach { entity ->
                     calendar.time = entity.date
                     val entityDay = calendar.get(Calendar.DAY_OF_YEAR)
                     
@@ -105,54 +65,119 @@ class TransactionsViewModel @Inject constructor(
                     yesterdayTransactions = yesterdayEntities
                 )
             }
-            */
         }
     }
     
     fun filterTransactions(filter: String) {
         viewModelScope.launch {
-            // 實際應用中，這裡會根據過濾條件從數據庫中獲取交易
-            // 這裡只是簡單模擬
-            val currentState = _uiState.value
-            
             when (filter) {
                 "收入" -> {
-                    val filteredToday = currentState.todayTransactions.filter { it.type == TransactionType.INCOME.name }
-                    val filteredYesterday = currentState.yesterdayTransactions.filter { it.type == TransactionType.INCOME.name }
-                    _uiState.value = currentState.copy(
-                        todayTransactions = filteredToday,
-                        yesterdayTransactions = filteredYesterday
-                    )
+                    transactionRepository.getTransactionsByType(TransactionType.INCOME.name).collectLatest { entities ->
+                        // 根據日期將交易分為今天和昨天
+                        val calendar = Calendar.getInstance()
+                        val today = calendar.get(Calendar.DAY_OF_YEAR)
+                        val todayEntities = mutableListOf<TransactionEntity>()
+                        val yesterdayEntities = mutableListOf<TransactionEntity>()
+                        
+                        // 確保按日期和創建時間排序
+                        val sortedEntities = entities.sortedWith(
+                            compareByDescending<TransactionEntity> { it.date }
+                                .thenByDescending { it.createdAt }
+                        )
+                        
+                        sortedEntities.forEach { entity ->
+                            calendar.time = entity.date
+                            val entityDay = calendar.get(Calendar.DAY_OF_YEAR)
+                            
+                            if (entityDay == today) {
+                                todayEntities.add(entity)
+                            } else if (entityDay == today - 1) {
+                                yesterdayEntities.add(entity)
+                            }
+                        }
+                        
+                        _uiState.value = TransactionsUiState(
+                            todayTransactions = todayEntities,
+                            yesterdayTransactions = yesterdayEntities
+                        )
+                    }
                 }
                 "支出" -> {
-                    val filteredToday = currentState.todayTransactions.filter { it.type == TransactionType.EXPENSE.name }
-                    val filteredYesterday = currentState.yesterdayTransactions.filter { it.type == TransactionType.EXPENSE.name }
-                    _uiState.value = currentState.copy(
-                        todayTransactions = filteredToday,
-                        yesterdayTransactions = filteredYesterday
-                    )
+                    transactionRepository.getTransactionsByType(TransactionType.EXPENSE.name).collectLatest { entities ->
+                        // 根據日期將交易分為今天和昨天
+                        val calendar = Calendar.getInstance()
+                        val today = calendar.get(Calendar.DAY_OF_YEAR)
+                        val todayEntities = mutableListOf<TransactionEntity>()
+                        val yesterdayEntities = mutableListOf<TransactionEntity>()
+                        
+                        // 確保按日期和創建時間排序
+                        val sortedEntities = entities.sortedWith(
+                            compareByDescending<TransactionEntity> { it.date }
+                                .thenByDescending { it.createdAt }
+                        )
+                        
+                        sortedEntities.forEach { entity ->
+                            calendar.time = entity.date
+                            val entityDay = calendar.get(Calendar.DAY_OF_YEAR)
+                            
+                            if (entityDay == today) {
+                                todayEntities.add(entity)
+                            } else if (entityDay == today - 1) {
+                                yesterdayEntities.add(entity)
+                            }
+                        }
+                        
+                        _uiState.value = TransactionsUiState(
+                            todayTransactions = todayEntities,
+                            yesterdayTransactions = yesterdayEntities
+                        )
+                    }
                 }
-                "餐飲" -> {
-                    val filteredToday = currentState.todayTransactions.filter { it.category == "餐飲" }
-                    val filteredYesterday = currentState.yesterdayTransactions.filter { it.category == "餐飲" }
-                    _uiState.value = currentState.copy(
-                        todayTransactions = filteredToday,
-                        yesterdayTransactions = filteredYesterday
-                    )
-                }
-                "購物" -> {
-                    val filteredToday = currentState.todayTransactions.filter { it.category == "購物" }
-                    val filteredYesterday = currentState.yesterdayTransactions.filter { it.category == "購物" }
-                    _uiState.value = currentState.copy(
-                        todayTransactions = filteredToday,
-                        yesterdayTransactions = filteredYesterday
-                    )
+                "餐飲", "購物", "交通", "娛樂", "醫療", "住宿", "其他" -> {
+                    // 這裡需要添加按類別過濾的功能
+                    // 目前暫時使用內存過濾
+                    transactionRepository.allTransactions.collectLatest { entities ->
+                        // 根據日期將交易分為今天和昨天
+                        val calendar = Calendar.getInstance()
+                        val today = calendar.get(Calendar.DAY_OF_YEAR)
+                        val todayEntities = mutableListOf<TransactionEntity>()
+                        val yesterdayEntities = mutableListOf<TransactionEntity>()
+                        
+                        // 先按類別過濾，然後按日期排序
+                        val filteredEntities = entities.filter { it.category == filter }
+                            .sortedWith(compareByDescending<TransactionEntity> { it.date }
+                                .thenByDescending { it.createdAt })
+                        
+                        filteredEntities.forEach { entity ->
+                            calendar.time = entity.date
+                            val entityDay = calendar.get(Calendar.DAY_OF_YEAR)
+                            
+                            if (entityDay == today) {
+                                todayEntities.add(entity)
+                            } else if (entityDay == today - 1) {
+                                yesterdayEntities.add(entity)
+                            }
+                        }
+                        
+                        _uiState.value = TransactionsUiState(
+                            todayTransactions = todayEntities,
+                            yesterdayTransactions = yesterdayEntities
+                        )
+                    }
                 }
                 else -> {
                     // 重新加載所有交易
                     loadTransactions()
                 }
             }
+        }
+    }
+    
+    // 刪除交易
+    fun deleteTransaction(transaction: TransactionEntity) {
+        viewModelScope.launch {
+            transactionRepository.deleteTransaction(transaction)
+            // 刪除後數據會自動更新，因為我們使用了 Flow
         }
     }
 }

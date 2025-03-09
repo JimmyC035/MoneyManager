@@ -1,5 +1,6 @@
 package com.example.moneymanager.presentation.screens.expense
 
+import android.app.DatePickerDialog
 import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -18,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,6 +36,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.example.moneymanager.data.local.entity.TransactionType
 import com.example.moneymanager.presentation.theme.Primary
 import com.example.moneymanager.presentation.theme.ThemeManager
 import java.text.SimpleDateFormat
@@ -181,7 +184,7 @@ fun AddExpenseDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "新增支出",
+                            text = if (uiState.transactionType == TransactionType.EXPENSE) "新增支出" else "新增收入",
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             color = textColor
@@ -198,6 +201,65 @@ fun AddExpenseDialog(
                                 contentDescription = "關閉",
                                 tint = textColor
                             )
+                        }
+                    }
+                    
+                    // 交易類型切換
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        TabRow(
+                            selectedTabIndex = if (uiState.transactionType == TransactionType.EXPENSE) 0 else 1,
+                            modifier = Modifier
+                                .fillMaxWidth(0.7f)
+                                .clip(RoundedCornerShape(16.dp)),
+                            indicator = { tabPositions ->
+                                Box {}
+                            },
+                            divider = { }
+                        ) {
+                            // 支出標籤
+                            Tab(
+                                selected = uiState.transactionType == TransactionType.EXPENSE,
+                                onClick = { viewModel.setTransactionType(TransactionType.EXPENSE) },
+                                modifier = Modifier
+                                    .padding(4.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(
+                                        if (uiState.transactionType == TransactionType.EXPENSE)
+                                            Primary else Color.Transparent
+                                    )
+                            ) {
+                                Text(
+                                    text = "支出",
+                                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
+                                    color = if (uiState.transactionType == TransactionType.EXPENSE) 
+                                        Color.White else textColor
+                                )
+                            }
+                            
+                            // 收入標籤
+                            Tab(
+                                selected = uiState.transactionType == TransactionType.INCOME,
+                                onClick = { viewModel.setTransactionType(TransactionType.INCOME) },
+                                modifier = Modifier
+                                    .padding(4.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(
+                                        if (uiState.transactionType == TransactionType.INCOME)
+                                            Primary else Color.Transparent
+                                    )
+                            ) {
+                                Text(
+                                    text = "收入",
+                                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
+                                    color = if (uiState.transactionType == TransactionType.INCOME) 
+                                        Color.White else textColor
+                                )
+                            }
                         }
                     }
                     
@@ -246,7 +308,7 @@ fun AddExpenseDialog(
                             expanded = uiState.showCategoryDropdown,
                             onDismissRequest = { viewModel.toggleCategoryDropdown() }
                         ) {
-                            viewModel.categories.forEach { category ->
+                            viewModel.currentCategories.forEach { category ->
                                 DropdownMenuItem(
                                     text = { Text(category) },
                                     onClick = {
@@ -261,8 +323,6 @@ fun AddExpenseDialog(
                     Spacer(modifier = Modifier.height(16.dp))
                     
                     // 日期選擇
-                    var showDatePicker by remember { mutableStateOf(false) }
-                    
                     OutlinedTextField(
                         value = uiState.date,
                         onValueChange = {},
@@ -270,49 +330,90 @@ fun AddExpenseDialog(
                         label = { Text("日期") },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { showDatePicker = true },
+                            .clickable { 
+                                Log.d("AddExpenseDialog", "點擊日期選擇器")
+                                // 使用原生 DatePickerDialog
+                                val currentDate = try {
+                                    SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(uiState.date) ?: Date()
+                                } catch (e: Exception) {
+                                    Date()
+                                }
+                                
+                                val calendar = Calendar.getInstance().apply {
+                                    time = currentDate
+                                }
+                                
+                                val year = calendar.get(Calendar.YEAR)
+                                val month = calendar.get(Calendar.MONTH)
+                                val day = calendar.get(Calendar.DAY_OF_MONTH)
+                                
+                                val datePickerDialog = DatePickerDialog(
+                                    context,
+                                    { _, selectedYear, selectedMonth, selectedDay ->
+                                        val selectedCalendar = Calendar.getInstance().apply {
+                                            set(selectedYear, selectedMonth, selectedDay)
+                                        }
+                                        val selectedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                                            .format(selectedCalendar.time)
+                                        viewModel.setDate(selectedDate)
+                                    },
+                                    year,
+                                    month,
+                                    day
+                                )
+                                
+                                datePickerDialog.show()
+                            },
                         shape = RoundedCornerShape(8.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             unfocusedBorderColor = if (isDarkTheme) Color.DarkGray else Color.LightGray,
                             focusedBorderColor = Primary,
                             unfocusedTextColor = textColor,
                             focusedTextColor = textColor
-                        )
-                    )
-                    
-                    if (showDatePicker) {
-                        val datePickerState = rememberDatePickerState(
-                            initialSelectedDateMillis = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                                .parse(uiState.date)?.time ?: System.currentTimeMillis()
-                        )
-                        
-                        DatePickerDialog(
-                            onDismissRequest = { showDatePicker = false },
-                            confirmButton = {
-                                TextButton(
-                                    onClick = {
-                                        datePickerState.selectedDateMillis?.let { millis ->
-                                            val selectedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                                                .format(Date(millis))
-                                            viewModel.setDate(selectedDate)
+                        ),
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                Log.d("AddExpenseDialog", "點擊日期選擇器圖標")
+                                // 使用原生 DatePickerDialog
+                                val currentDate = try {
+                                    SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(uiState.date) ?: Date()
+                                } catch (e: Exception) {
+                                    Date()
+                                }
+                                
+                                val calendar = Calendar.getInstance().apply {
+                                    time = currentDate
+                                }
+                                
+                                val year = calendar.get(Calendar.YEAR)
+                                val month = calendar.get(Calendar.MONTH)
+                                val day = calendar.get(Calendar.DAY_OF_MONTH)
+                                
+                                val datePickerDialog = DatePickerDialog(
+                                    context,
+                                    { _, selectedYear, selectedMonth, selectedDay ->
+                                        val selectedCalendar = Calendar.getInstance().apply {
+                                            set(selectedYear, selectedMonth, selectedDay)
                                         }
-                                        showDatePicker = false
-                                    }
-                                ) {
-                                    Text("確認")
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(
-                                    onClick = { showDatePicker = false }
-                                ) {
-                                    Text("取消")
-                                }
+                                        val selectedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                                            .format(selectedCalendar.time)
+                                        viewModel.setDate(selectedDate)
+                                    },
+                                    year,
+                                    month,
+                                    day
+                                )
+                                
+                                datePickerDialog.show()
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.DateRange,
+                                    contentDescription = "選擇日期",
+                                    tint = Primary
+                                )
                             }
-                        ) {
-                            DatePicker(state = datePickerState)
                         }
-                    }
+                    )
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     
@@ -410,7 +511,8 @@ fun AddExpenseDialog(
                         )
                     ) {
                         Text(
-                            text = "確認新增",
+                            text = if (uiState.transactionType == TransactionType.EXPENSE) 
+                                "確認新增支出" else "確認新增收入",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )

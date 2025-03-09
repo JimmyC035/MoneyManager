@@ -12,6 +12,9 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.moneymanager.data.local.entity.TransactionEntity
+import com.example.moneymanager.data.local.entity.TransactionType
+import com.example.moneymanager.data.repository.TransactionRepository
 import com.example.moneymanager.util.ImageHelper
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.Text
@@ -29,14 +32,22 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AddExpenseViewModel @Inject constructor(
-    private val imageHelper: ImageHelper
+    private val imageHelper: ImageHelper,
+    private val transactionRepository: TransactionRepository
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(AddExpenseUiState())
     val uiState: StateFlow<AddExpenseUiState> = _uiState.asStateFlow()
     
     // 支出類別列表
-    val categories = listOf("餐飲", "交通", "購物", "娛樂", "醫療", "住宿", "其他")
+    val expenseCategories = listOf("餐飲", "交通", "購物", "娛樂", "醫療", "住宿", "其他")
+    
+    // 收入類別列表
+    val incomeCategories = listOf("薪資", "獎金", "投資", "禮金", "其他收入")
+    
+    // 當前可用的類別列表
+    val currentCategories: List<String>
+        get() = if (_uiState.value.transactionType == TransactionType.EXPENSE) expenseCategories else incomeCategories
     
     private var tempImageUri: Uri? = null
     private val recognizer = TextRecognition.getClient(ChineseTextRecognizerOptions.Builder().build())
@@ -45,6 +56,11 @@ class AddExpenseViewModel @Inject constructor(
         // 設置初始日期為今天
         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         setDate(today)
+        
+        // 設置初始類別
+        if (expenseCategories.isNotEmpty()) {
+            setCategory(expenseCategories.first())
+        }
     }
     
     fun setAmount(amount: String) {
@@ -67,6 +83,24 @@ class AddExpenseViewModel @Inject constructor(
         _uiState.update { it.copy(
             showCategoryDropdown = !it.showCategoryDropdown
         ) }
+    }
+    
+    // 設置交易類型（收入或支出）
+    fun setTransactionType(type: TransactionType) {
+        _uiState.update { it.copy(transactionType = type) }
+        
+        // 當切換類型時，重置類別選擇
+        val categories = if (type == TransactionType.EXPENSE) expenseCategories else incomeCategories
+        if (categories.isNotEmpty()) {
+            setCategory(categories.first())
+        }
+    }
+    
+    // 切換交易類型
+    fun toggleTransactionType() {
+        val newType = if (_uiState.value.transactionType == TransactionType.EXPENSE) 
+            TransactionType.INCOME else TransactionType.EXPENSE
+        setTransactionType(newType)
     }
     
     fun checkCameraPermission(
@@ -249,8 +283,81 @@ class AddExpenseViewModel @Inject constructor(
         context.startActivity(intent)
     }
     
+    // 保存交易到數據庫
     fun saveExpense() {
-        // TODO: 保存支出到資料庫
+        viewModelScope.launch {
+            try {
+                // 驗證輸入
+                val amountStr = _uiState.value.amount
+                if (amountStr.isBlank()) {
+                    // 金額為空，不保存
+                    return@launch
+                }
+                
+                val amount = amountStr.toDoubleOrNull() ?: 0.0
+                if (amount <= 0) {
+                    // 金額無效，不保存
+                    return@launch
+                }
+                
+                val category = _uiState.value.selectedCategory
+                val note = _uiState.value.note
+                val dateStr = _uiState.value.date
+                val transactionType = _uiState.value.transactionType
+                
+                // 解析日期
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                val date = try {
+                    dateFormat.parse(dateStr) ?: Date()
+                } catch (e: Exception) {
+                    Date()
+                }
+                
+                // 創建 TransactionEntity
+                val transaction = TransactionEntity(
+                    title = if (note.isNotEmpty()) note else category,
+                    amount = amount,
+                    category = category,
+                    type = transactionType.name,
+                    date = date,
+                    note = note,
+                    imageUri = _uiState.value.imageUri?.toString()
+                )
+                
+                // 保存到數據庫
+                transactionRepository.insertTransaction(transaction)
+                
+                // 重置表單
+                resetForm()
+                
+                Log.d("AddExpenseViewModel", "交易已保存: $transaction")
+            } catch (e: Exception) {
+                Log.e("AddExpenseViewModel", "保存交易失敗", e)
+            }
+        }
+    }
+    
+    // 重置表單
+    private fun resetForm() {
+        _uiState.update { it.copy(
+            amount = "",
+            note = "",
+            imageUri = null,
+            fullRecognizedText = "",
+            textBlocks = emptyList()
+        ) }
+        
+        // 設置初始日期為今天
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        setDate(today)
+        
+        // 重置為支出類型
+        setTransactionType(TransactionType.EXPENSE)
+        
+        // 設置初始類別
+        if (expenseCategories.isNotEmpty()) {
+            setCategory(expenseCategories.first())
+        }
     }
 }
 
@@ -265,7 +372,8 @@ data class AddExpenseUiState(
     val showPermissionDeniedDialog: Boolean = false,
     val shouldLaunchCamera: Boolean = false,
     val isInImageEditMode: Boolean = false,
-    val textBlocks: List<TextBlock> = emptyList()
+    val textBlocks: List<TextBlock> = emptyList(),
+    val transactionType: TransactionType = TransactionType.EXPENSE
 )
 
 data class TextBlock(

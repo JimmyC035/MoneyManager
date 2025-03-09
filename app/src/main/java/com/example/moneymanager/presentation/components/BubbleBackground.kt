@@ -57,7 +57,7 @@ private fun BubbleEffect(
         val infiniteTransition1 = rememberInfiniteTransition(label = "bubble1")
         val offsetY1 by infiniteTransition1.animateFloat(
             initialValue = -40f,
-            targetValue = -20f,
+            targetValue = -10f,
             animationSpec = infiniteRepeatable(
                 animation = tween(3000, easing = LinearEasing),
                 repeatMode = RepeatMode.Reverse
@@ -65,7 +65,7 @@ private fun BubbleEffect(
         )
         val offsetX1 by infiniteTransition1.animateFloat(
             initialValue = -40f,
-            targetValue = -20f,
+            targetValue = -5f,
             animationSpec = infiniteRepeatable(
                 animation = tween(4000, easing = LinearEasing),
                 repeatMode = RepeatMode.Reverse
