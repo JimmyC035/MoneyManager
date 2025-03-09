@@ -1,4 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">智能記賬</string>
+    
+    <!-- Home Screen -->
+    <string name="home_title">智能記賬</string>
+    <string name="total_assets">總資產</string>
+    <string name="monthly_income">本月收入</string>
+    <string name="monthly_expense">本月支出</string>
+    <string name="recent_transactions">最近交易</string>
+    <string name="add_transaction">新增交易紀錄</string>
+    <string name="monthly_budget">本月預算</string>
+    
+    <!-- Settings Screen -->
+    <string name="settings">設定</string>
+    <string name="change_language">Change Language</string>
+    <string name="current_language">目前語言</string>
+    <string name="language_english">English</string>
+    <string name="language_chinese">中文</string>
+    
+    <!-- Transaction Item -->
+    <string name="delete">刪除</string>
+    <string name="collapse">收起</string>
+    <string name="expand">展開</string>
+    <string name="note">備註</string>
+    <string name="no_note">無備註</string>
+    <string name="category">類別: %s</string>
+    <string name="attached_image">附加圖片</string>
+    
+    <!-- Categories -->
+    <string name="category_food">餐飲</string>
+    <string name="category_shopping">購物</string>
+    <string name="category_transport">交通</string>
+    <string name="category_entertainment">娛樂</string>
+    <string name="category_medical">醫療</string>
+    <string name="category_housing">住宿</string>
+    <string name="category_other">其他</string>
+    <string name="category_income">收入</string>
+    <string name="category_salary">薪資</string>
+    <string name="category_bonus">獎金</string>
+    <string name="category_investment">投資</string>
+    <string name="category_gift">禮金</string>
+    <string name="category_other_income">其他收入</string>
+    <string name="category_coffee">咖啡</string>
+    <string name="category_lunch">午餐</string>
+    <string name="category_dinner">晚餐</string>
+    <string name="category_breakfast">早餐</string>
+    <string name="category_supermarket">超市</string>
 </resources>

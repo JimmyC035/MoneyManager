@@ -19,18 +19,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,14 +30,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.moneymanager.R
 import com.example.moneymanager.data.local.entity.TransactionEntity
 import com.example.moneymanager.data.local.entity.TransactionType
-import com.example.moneymanager.presentation.theme.Error
-import com.example.moneymanager.presentation.theme.Success
 import kotlinx.coroutines.launch
+import java.text.NumberFormat
+import java.util.*
 
 // 全局狀態，用於跟踪當前正在滑動的項目ID
 private val CurrentlySwipedItemId = mutableStateOf<Long?>(null)
@@ -55,9 +47,9 @@ private val CurrentlySwipedItemId = mutableStateOf<Long?>(null)
 @Composable
 fun TransactionItem(
     transaction: TransactionEntity,
+    onDelete: (TransactionEntity) -> Unit,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit = {},
-    onDelete: (TransactionEntity) -> Unit = {}
+    showSwipeToDelete: Boolean = true
 ) {
     var expanded by remember { mutableStateOf(false) }
     val rotationState by animateFloatAsState(
@@ -81,7 +73,9 @@ fun TransactionItem(
     // 如果當前項目不是正在滑動的項目，但offsetX不為0，則重置offsetX
     LaunchedEffect(CurrentlySwipedItemId.value) {
         if (!isCurrentlySwipedItem && offsetX != 0f) {
-            offsetX = 0f
+            coroutineScope.launch {
+                offsetX = 0f
+            }
         }
     }
     
@@ -98,23 +92,20 @@ fun TransactionItem(
             .padding(vertical = 4.dp)
     ) {
         // 刪除按鈕
-        if (isDeleteVisible) {
+        if (showSwipeToDelete && isDeleteVisible) {
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .height(72.dp) // 與卡片高度一致
+                    .height(72.dp)
                     .width(deleteButtonWidth)
                     .background(Color.Red, shape = RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp))
                     .clickable {
-                        // 震動反饋
                         try {
                             context.vibrate()
                         } catch (e: Exception) {
                             // 忽略震動錯誤
                         }
-                        // 刪除交易
                         onDelete(transaction)
-                        // 重置偏移和當前滑動項目
                         offsetX = 0f
                         CurrentlySwipedItemId.value = null
                     },
@@ -122,7 +113,7 @@ fun TransactionItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "刪除",
+                    contentDescription = stringResource(R.string.delete),
                     tint = Color.White
                 )
             }
@@ -133,66 +124,59 @@ fun TransactionItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .offset(x = animatedOffsetX.dp)
-                .draggable(
-                    orientation = Orientation.Horizontal,
-                    state = rememberDraggableState { delta ->
-                        // 只有當前項目是正在滑動的項目，或者沒有項目正在滑動時，才允許滑動
-                        if (isCurrentlySwipedItem || CurrentlySwipedItemId.value == null) {
-                            // 設置當前滑動項目
-                            if (CurrentlySwipedItemId.value == null && delta < 0) {
-                                CurrentlySwipedItemId.value = transaction.id
-                            }
-                            
-                            // 減慢滑動速度，使其更加自然
-                            val slowedDelta = delta * 0.5f
-                            
-                            // 只允許向左滑動（負值）且限制最大滑動距離
-                            if (slowedDelta < 0) {
-                                // 向左滑動，但不超過刪除按鈕寬度
-                                val newOffset = (offsetX + slowedDelta).coerceIn(-deleteButtonWidthPx, 0f)
-                                offsetX = newOffset
-                            } else if (offsetX < 0) {
-                                // 向右回彈，但不超過初始位置
-                                val newOffset = (offsetX + slowedDelta).coerceAtMost(0f)
-                                offsetX = newOffset
-                            }
-                        }
-                    },
-                    onDragStopped = {
-                        if (offsetX > -deleteButtonWidthPx / 2) {
-                            // 如果滑動距離不夠，回彈
-                            coroutineScope.launch {
-                                offsetX = 0f
-                                // 重置當前滑動項目
-                                if (CurrentlySwipedItemId.value == transaction.id) {
-                                    CurrentlySwipedItemId.value = null
+                .then(
+                    if (showSwipeToDelete) {
+                        Modifier.draggable(
+                            orientation = Orientation.Horizontal,
+                            state = rememberDraggableState { delta ->
+                                if (isCurrentlySwipedItem || CurrentlySwipedItemId.value == null) {
+                                    if (CurrentlySwipedItemId.value == null && delta < 0) {
+                                        CurrentlySwipedItemId.value = transaction.id
+                                    }
+                                    
+                                    val slowedDelta = delta * 0.5f
+                                    
+                                    if (slowedDelta < 0) {
+                                        val newOffset = (offsetX + slowedDelta).coerceIn(-deleteButtonWidthPx, 0f)
+                                        offsetX = newOffset
+                                    } else if (offsetX < 0) {
+                                        val newOffset = (offsetX + slowedDelta).coerceAtMost(0f)
+                                        offsetX = newOffset
+                                    }
+                                }
+                            },
+                            onDragStopped = {
+                                if (offsetX > -deleteButtonWidthPx / 2) {
+                                    coroutineScope.launch {
+                                        offsetX = 0f
+                                        if (CurrentlySwipedItemId.value == transaction.id) {
+                                            CurrentlySwipedItemId.value = null
+                                        }
+                                    }
+                                } else {
+                                    coroutineScope.launch {
+                                        offsetX = -deleteButtonWidthPx
+                                        try {
+                                            context.vibrate()
+                                        } catch (e: Exception) {
+                                            // 忽略震動錯誤
+                                        }
+                                    }
                                 }
                             }
-                        } else {
-                            // 如果滑動距離足夠，顯示刪除按鈕
-                            coroutineScope.launch {
-                                offsetX = -deleteButtonWidthPx
-                                // 震動反饋
-                                try {
-                                    context.vibrate()
-                                } catch (e: Exception) {
-                                    // 忽略震動錯誤
-                                }
-                            }
-                        }
+                        )
+                    } else {
+                        Modifier
                     }
                 )
-                .clickable { 
+                .clickable {
                     if (offsetX == 0f) {
                         expanded = !expanded
                     } else {
-                        // 如果卡片已經滑動，點擊時先回彈
+                        // 如果卡片已經有滑動偏移，則回彈到 0
                         coroutineScope.launch {
                             offsetX = 0f
-                            // 重置當前滑動項目
-                            if (CurrentlySwipedItemId.value == transaction.id) {
-                                CurrentlySwipedItemId.value = null
-                            }
+                            CurrentlySwipedItemId.value = null
                         }
                     }
                 },
@@ -244,7 +228,6 @@ fun TransactionItem(
                         
                         Spacer(modifier = Modifier.height(4.dp))
                         
-                        // 顯示類別而不是日期
                         Text(
                             text = transaction.category,
                             style = MaterialTheme.typography.bodySmall,
@@ -260,13 +243,14 @@ fun TransactionItem(
                             text = formatAmount(transaction.amount, transaction.getTransactionType()),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
-                            color = if (transaction.getTransactionType() == TransactionType.EXPENSE) Error else Success
+                            color = if (transaction.getTransactionType() == TransactionType.EXPENSE) 
+                                Color(0xFFfa5252) else Color(0xFF40c057)
                         )
                         
-                        // 展開/收起箭頭
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = if (expanded) "收起" else "展開",
+                            contentDescription = if (expanded) 
+                                stringResource(R.string.collapse) else stringResource(R.string.expand),
                             modifier = Modifier
                                 .size(24.dp)
                                 .rotate(rotationState),
@@ -294,7 +278,7 @@ fun TransactionItem(
                         // 備註
                         if (transaction.note.isNotEmpty()) {
                             Text(
-                                text = "備註",
+                                text = stringResource(R.string.note),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -309,7 +293,7 @@ fun TransactionItem(
                             )
                         } else {
                             Text(
-                                text = "無備註",
+                                text = stringResource(R.string.no_note),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                             )
@@ -319,16 +303,16 @@ fun TransactionItem(
                         Spacer(modifier = Modifier.height(8.dp))
                         
                         Text(
-                            text = "類別: ${transaction.category}",
+                            text = stringResource(R.string.category, transaction.category),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                         )
                         
                         // 如果有圖片，可以在這裡顯示
-                        transaction.imageUri?.let { uri ->
+                        transaction.imageUri?.let { _ ->
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "附加圖片",
+                                text = stringResource(R.string.attached_image),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -342,18 +326,10 @@ fun TransactionItem(
     }
 }
 
-private fun formatAmount(amount: Double, type: TransactionType): String {
-    return when (type) {
-        TransactionType.EXPENSE -> "-¥ ${String.format("%.2f", amount)}"
-        TransactionType.INCOME -> "+¥ ${String.format("%.2f", amount)}"
-        else -> "¥ ${String.format("%.2f", amount)}"
-    }
-}
-
 private fun getCategoryColor(type: TransactionType): Color {
     return when (type) {
-        TransactionType.EXPENSE -> Error
-        TransactionType.INCOME -> Success
+        TransactionType.EXPENSE -> Color(0xFFfa5252)
+        TransactionType.INCOME -> Color(0xFF40c057)
         else -> Color.Gray
     }
 }
@@ -365,6 +341,14 @@ private fun getCategoryIcon(category: String): ImageVector {
         "收入", "薪資", "獎金", "投資", "禮金", "其他收入" -> Icons.Default.Star
         "咖啡" -> Icons.Default.Info
         else -> Icons.Default.ShoppingCart
+    }
+}
+
+private fun formatAmount(amount: Double, type: TransactionType): String {
+    return when (type) {
+        TransactionType.EXPENSE -> "-¥ ${String.format("%.2f", amount)}"
+        TransactionType.INCOME -> "+¥ ${String.format("%.2f", amount)}"
+        else -> "¥ ${String.format("%.2f", amount)}"
     }
 }
 

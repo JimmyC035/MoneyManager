@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Money Manager</string>
+    
+    <!-- Home Screen -->
+    <string name="home_title">Money Manager</string>
+    <string name="total_assets">Total Assets</string>
+    <string name="monthly_income">Monthly Income</string>
+    <string name="monthly_expense">Monthly Expense</string>
+    <string name="recent_transactions">Recent Transactions</string>
+    <string name="add_transaction">Add Transaction</string>
+    <string name="monthly_budget">Monthly Budget</string>
+    
+    <!-- Settings Screen -->
+    <string name="settings">Settings</string>
+    <string name="change_language">改變語言</string>
+    <string name="current_language">Current Language</string>
+    <string name="language_english">English</string>
+    <string name="language_chinese">中文</string>
+    
+    <!-- Transaction Item -->
+    <string name="delete">Delete</string>
+    <string name="collapse">Collapse</string>
+    <string name="expand">Expand</string>
+    <string name="note">Note</string>
+    <string name="no_note">No Note</string>
+    <string name="category">Category: %s</string>
+    <string name="attached_image">Attached Image</string>
+    
+    <!-- Categories -->
+    <string name="category_food">Food</string>
+    <string name="category_shopping">Shopping</string>
+    <string name="category_transport">Transport</string>
+    <string name="category_entertainment">Entertainment</string>
+    <string name="category_medical">Medical</string>
+    <string name="category_housing">Housing</string>
+    <string name="category_other">Other</string>
+    <string name="category_income">Income</string>
+    <string name="category_salary">Salary</string>
+    <string name="category_bonus">Bonus</string>
+    <string name="category_investment">Investment</string>
+    <string name="category_gift">Gift</string>
+    <string name="category_other_income">Other Income</string>
+    <string name="category_coffee">Coffee</string>
+    <string name="category_lunch">Lunch</string>
+    <string name="category_dinner">Dinner</string>
+    <string name="category_breakfast">Breakfast</string>
+    <string name="category_supermarket">Supermarket</string>
+</resources> 

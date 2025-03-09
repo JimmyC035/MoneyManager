@@ -1,5 +1,6 @@
 package com.example.moneymanager.presentation.screens.settings
 
+import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,6 +12,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.AttachMoney
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,15 +20,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.moneymanager.R
 import com.example.moneymanager.presentation.components.BottomNavBar
 import com.example.moneymanager.presentation.components.BubbleBackground
 import com.example.moneymanager.presentation.navigation.Screen
 import com.example.moneymanager.presentation.theme.Primary
 import com.example.moneymanager.presentation.theme.ThemeManager
+import com.example.moneymanager.util.LocaleHelper
 
 @Composable
 fun SettingsScreen(navController: NavController) {
@@ -38,6 +44,14 @@ fun SettingsScreen(navController: NavController) {
     var isDarkTheme by remember { mutableStateOf(ThemeManager.isDarkTheme.value) }
     var notificationsEnabled by remember { mutableStateOf(true) }
     var showCurrencyDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    
+    val context = LocalContext.current
+    val currentLanguage = if (LocaleHelper.isCurrentLanguageEnglish(context)) {
+        stringResource(R.string.language_english)
+    } else {
+        stringResource(R.string.language_chinese)
+    }
     
     // 監聽主題變化
     LaunchedEffect(ThemeManager.isDarkTheme.value) {
@@ -217,6 +231,43 @@ fun SettingsScreen(navController: NavController) {
                                 checkedThumbColor = Primary,
                                 checkedTrackColor = Primary.copy(alpha = 0.5f)
                             )
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // 語言設置選項
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showLanguageDialog = true },
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Language,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    Spacer(modifier = Modifier.width(16.dp))
+                    
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.change_language),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = currentLanguage,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
                     }
                 }
@@ -416,6 +467,49 @@ fun SettingsScreen(navController: NavController) {
                 },
                 containerColor = cardColor,
                 shape = RoundedCornerShape(16.dp)
+            )
+        }
+        
+        // 語言選擇對話框
+        if (showLanguageDialog) {
+            AlertDialog(
+                onDismissRequest = { showLanguageDialog = false },
+                title = { Text(stringResource(R.string.change_language)) },
+                text = {
+                    Column {
+                        // 英文選項
+                        Text(
+                            text = stringResource(R.string.language_english),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    LocaleHelper.setLocale(context, "en")
+                                    showLanguageDialog = false
+                                    (context as? Activity)?.recreate()
+                                }
+                                .padding(vertical = 12.dp)
+                        )
+                        
+                        // 中文選項
+                        Text(
+                            text = stringResource(R.string.language_chinese),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    LocaleHelper.setLocale(context, "zh")
+                                    showLanguageDialog = false
+                                    (context as? Activity)?.recreate()
+                                }
+                                .padding(vertical = 12.dp)
+                        )
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { showLanguageDialog = false }) {
+                        Text(stringResource(R.string.collapse))
+                    }
+                }
             )
         }
         
