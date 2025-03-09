@@ -20,6 +20,10 @@ class TransactionRepository @Inject constructor(
         transactionDao.deleteTransaction(transaction)
     }
     
+    suspend fun updateTransaction(transaction: TransactionEntity) {
+        transactionDao.updateTransaction(transaction)
+    }
+    
     fun getTotalIncome(): Flow<Double?> {
         return transactionDao.getTotalIncome()
     }

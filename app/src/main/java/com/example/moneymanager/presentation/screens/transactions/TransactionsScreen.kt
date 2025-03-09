@@ -14,15 +14,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.moneymanager.presentation.components.AddFloatingActionButton
 import com.example.moneymanager.presentation.components.BottomNavBar
 import com.example.moneymanager.presentation.components.TransactionItem
 import com.example.moneymanager.presentation.navigation.Screen
 import com.example.moneymanager.presentation.screens.expense.AddExpenseDialog
 import com.example.moneymanager.presentation.theme.Primary
+import com.example.moneymanager.util.DateFormatter
+import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,7 +35,7 @@ fun TransactionsScreen(
     viewModel: TransactionsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val currentTime = viewModel.currentTime
+    val context = LocalContext.current
     
     var selectedFilter by remember { mutableStateOf("全部") }
     val filters = listOf("全部", "收入", "支出", "餐飲", "購物")
@@ -66,16 +70,9 @@ fun TransactionsScreen(
         },
         bottomBar = { BottomNavBar(navController = navController, currentRoute = Screen.Transactions.route) },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showAddExpenseDialog = true },
-                containerColor = Primary
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "添加交易",
-                    tint = Color.White
-                )
-            }
+            AddFloatingActionButton(
+                onClick = { showAddExpenseDialog = true }
+            )
         }
     ) { paddingValues ->
         Column(
@@ -139,43 +136,28 @@ fun TransactionsScreen(
                 }
             }
             
-            // 今天標籤
-            Text(
-                text = "今天",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
-            
             // 交易列表
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // 今天的交易
-                items(uiState.todayTransactions) { transaction ->
-                    TransactionItem(
-                        transaction = transaction,
-                        onDelete = { viewModel.deleteTransaction(it) }
-                    )
-                }
-                
-                // 昨天標籤
-                item {
-                    Text(
-                        text = "昨天",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-                }
-                
-                // 昨天的交易
-                items(uiState.yesterdayTransactions) { transaction ->
-                    TransactionItem(
-                        transaction = transaction,
-                        onDelete = { viewModel.deleteTransaction(it) }
-                    )
+                // 按日期分組顯示交易
+                uiState.groupedTransactions.forEach { (date, transactions) ->
+                    item {
+                        Text(
+                            text = DateFormatter.getFormattedDate(context, date),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                    
+                    items(transactions) { transaction ->
+                        TransactionItem(
+                            transaction = transaction,
+                            onDelete = { viewModel.deleteTransaction(it) }
+                        )
+                    }
                 }
                 
                 // 底部空間

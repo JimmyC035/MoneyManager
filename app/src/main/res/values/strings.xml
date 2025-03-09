@@ -27,6 +27,11 @@
     <string name="category">類別: %s</string>
     <string name="attached_image">附加圖片</string>
     
+    <!-- Date -->
+    <string name="today">今天</string>
+    <string name="yesterday">昨天</string>
+    <string name="date_format">%d月%d日</string>
+    
     <!-- Categories -->
     <string name="category_food">餐飲</string>
     <string name="category_shopping">購物</string>

@@ -27,6 +27,11 @@
     <string name="category">Category: %s</string>
     <string name="attached_image">Attached Image</string>
     
+    <!-- Date -->
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
+    <string name="date_format">%s %d</string>
+    
     <!-- Categories -->
     <string name="category_food">Food</string>
     <string name="category_shopping">Shopping</string>
