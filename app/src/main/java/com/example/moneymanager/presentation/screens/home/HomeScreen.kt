@@ -66,7 +66,7 @@ private fun HomeScreenBody(
             .padding(paddingValues)
             .padding(horizontal = 16.dp)
             .windowInsetsPadding(WindowInsets.statusBars),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
             // 標題

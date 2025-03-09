@@ -64,7 +64,11 @@ class AddExpenseViewModel @Inject constructor(
     }
     
     fun setAmount(amount: String) {
-        _uiState.update { it.copy(amount = amount) }
+        _uiState.update { it.copy(
+            amount = amount,
+            amountError = false,
+            amountErrorMessage = ""
+        ) }
     }
     
     fun setCategory(category: String) {
@@ -284,21 +288,35 @@ class AddExpenseViewModel @Inject constructor(
     }
     
     // 保存交易到數據庫
-    fun saveExpense() {
+    fun saveExpense(onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             try {
                 // 驗證輸入
                 val amountStr = _uiState.value.amount
                 if (amountStr.isBlank()) {
-                    // 金額為空，不保存
+                    // 金額為空，設置錯誤狀態
+                    _uiState.update { it.copy(
+                        amountError = true,
+                        amountErrorMessage = "請輸入正確金額"
+                    ) }
                     return@launch
                 }
                 
                 val amount = amountStr.toDoubleOrNull() ?: 0.0
                 if (amount <= 0) {
-                    // 金額無效，不保存
+                    // 金額無效，設置錯誤狀態
+                    _uiState.update { it.copy(
+                        amountError = true,
+                        amountErrorMessage = "請輸入正確金額"
+                    ) }
                     return@launch
                 }
+                
+                // 清除錯誤狀態
+                _uiState.update { it.copy(
+                    amountError = false,
+                    amountErrorMessage = ""
+                ) }
                 
                 val category = _uiState.value.selectedCategory
                 val note = _uiState.value.note
@@ -315,7 +333,7 @@ class AddExpenseViewModel @Inject constructor(
                 
                 // 創建 TransactionEntity
                 val transaction = TransactionEntity(
-                    title = if (note.isNotEmpty()) note else category,
+                    title = category,
                     amount = amount,
                     category = category,
                     type = transactionType.name,
@@ -331,6 +349,9 @@ class AddExpenseViewModel @Inject constructor(
                 resetForm()
                 
                 Log.d("AddExpenseViewModel", "交易已保存: $transaction")
+                
+                // 通知 UI 層保存成功
+                onSuccess()
             } catch (e: Exception) {
                 Log.e("AddExpenseViewModel", "保存交易失敗", e)
             }
@@ -373,7 +394,9 @@ data class AddExpenseUiState(
     val shouldLaunchCamera: Boolean = false,
     val isInImageEditMode: Boolean = false,
     val textBlocks: List<TextBlock> = emptyList(),
-    val transactionType: TransactionType = TransactionType.EXPENSE
+    val transactionType: TransactionType = TransactionType.EXPENSE,
+    val amountError: Boolean = false,
+    val amountErrorMessage: String = ""
 )
 
 data class TextBlock(

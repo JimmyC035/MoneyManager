@@ -9,7 +9,7 @@ import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
 @HiltAndroidApp
-class MoneyManagerApp : Application() {
+class MoneyManagerApplication : Application() {
     @Inject
     lateinit var preferencesDataStore: PreferencesDataStore
     

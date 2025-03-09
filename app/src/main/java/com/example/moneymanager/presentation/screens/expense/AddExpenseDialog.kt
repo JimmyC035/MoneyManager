@@ -271,12 +271,25 @@ fun AddExpenseDialog(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            unfocusedBorderColor = if (isDarkTheme) Color.DarkGray else Color.LightGray,
-                            focusedBorderColor = Primary,
+                            unfocusedBorderColor = if (uiState.amountError) Color.Red 
+                                else if (isDarkTheme) Color.DarkGray else Color.LightGray,
+                            focusedBorderColor = if (uiState.amountError) Color.Red else Primary,
                             unfocusedTextColor = textColor,
-                            focusedTextColor = textColor
+                            focusedTextColor = textColor,
+                            errorBorderColor = Color.Red,
+                            errorTextColor = Color.Red,
+                            errorLabelColor = Color.Red
                         ),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = uiState.amountError,
+                        supportingText = {
+                            if (uiState.amountError) {
+                                Text(
+                                    text = uiState.amountErrorMessage,
+                                    color = Color.Red
+                                )
+                            }
+                        }
                     )
                     
                     Spacer(modifier = Modifier.height(16.dp))
@@ -498,9 +511,11 @@ fun AddExpenseDialog(
                     // 確認按鈕
                     Button(
                         onClick = { 
-                            viewModel.saveExpense()
-                            visible = false
-                            onSave()
+                            viewModel.saveExpense {
+                                // 保存成功時的回調
+                                visible = false
+                                onSave()
+                            }
                         },
                         modifier = Modifier
                             .fillMaxWidth()

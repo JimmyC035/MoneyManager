@@ -81,10 +81,8 @@ fun TransactionItem(
     }
 
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-    ) {
+        modifier = modifier.fillMaxWidth())
+    {
         // 刪除按鈕
         if (showSwipeToDelete && isDeleteVisible) {
             Box(
@@ -343,9 +341,9 @@ private fun getCategoryIcon(category: String): ImageVector {
 
 private fun formatAmount(amount: Double, type: TransactionType): String {
     return when (type) {
-        TransactionType.EXPENSE -> "-¥ ${String.format("%.2f", amount)}"
-        TransactionType.INCOME -> "+¥ ${String.format("%.2f", amount)}"
-        else -> "¥ ${String.format("%.2f", amount)}"
+        TransactionType.EXPENSE -> "-$ ${String.format(Locale.TAIWAN,"%.2f", amount)}"
+        TransactionType.INCOME -> "+$ ${String.format(Locale.TAIWAN,"%.2f", amount)}"
+        else -> "$ ${String.format(Locale.TAIWAN,"%.2f", amount)}"
     }
 }
 
