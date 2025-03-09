@@ -2,20 +2,24 @@ package com.example.moneymanager.presentation.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.moneymanager.presentation.model.Transaction
-import com.example.moneymanager.presentation.model.TransactionType
+import com.example.moneymanager.data.local.dao.TransactionDao
+import com.example.moneymanager.data.local.entity.TransactionEntity
+import com.example.moneymanager.data.local.entity.TransactionType
 import com.example.moneymanager.util.BudgetMock
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
-class HomeViewModel @Inject constructor() : ViewModel() {
+class HomeViewModel @Inject constructor(
+    private val transactionDao: TransactionDao
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
@@ -34,21 +38,21 @@ class HomeViewModel @Inject constructor() : ViewModel() {
         viewModelScope.launch {
             // 模擬數據加載
             val recentTransactions = listOf(
-                Transaction(
-                    id = "1",
+                TransactionEntity(
+                    id = 1,
                     title = "午餐",
                     amount = 45.0,
-                    date = "今天, 12:30",
+                    date = Date(),
                     category = "餐飲",
-                    type = TransactionType.EXPENSE
+                    type = TransactionType.EXPENSE.name
                 ),
-                Transaction(
-                    id = "3",
+                TransactionEntity(
+                    id = 3,
                     title = "超市購物",
                     amount = 156.5,
-                    date = "昨天, 18:45",
+                    date = Date(System.currentTimeMillis() - 24 * 60 * 60 * 1000), // 昨天
                     category = "購物",
-                    type = TransactionType.EXPENSE
+                    type = TransactionType.EXPENSE.name
                 )
             )
             
@@ -65,6 +69,26 @@ class HomeViewModel @Inject constructor() : ViewModel() {
                 recentTransactions = recentTransactions,
                 budgets = budgets
             )
+            
+            // 下面是從數據庫獲取數據的示例代碼，目前被注釋掉
+            /*
+            // 獲取收入總額
+            transactionDao.getTotalIncome().collectLatest { income ->
+                // 獲取支出總額
+                transactionDao.getTotalExpense().collectLatest { expense ->
+                    // 獲取最近的交易
+                    transactionDao.getAllTransactions().collectLatest { entities ->
+                        _uiState.value = HomeUiState(
+                            totalBalance = (income ?: 0.0) - (expense ?: 0.0),
+                            monthlyIncome = income ?: 0.0,
+                            monthlyExpense = expense ?: 0.0,
+                            recentTransactions = entities.take(5),
+                            budgets = budgets
+                        )
+                    }
+                }
+            }
+            */
         }
     }
 }
@@ -73,6 +97,6 @@ data class HomeUiState(
     val totalBalance: Double = 0.0,
     val monthlyIncome: Double = 0.0,
     val monthlyExpense: Double = 0.0,
-    val recentTransactions: List<Transaction> = emptyList(),
+    val recentTransactions: List<TransactionEntity> = emptyList(),
     val budgets: List<BudgetMock> = emptyList()
 ) 

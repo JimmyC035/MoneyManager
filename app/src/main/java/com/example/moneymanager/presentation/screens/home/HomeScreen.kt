@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -18,16 +17,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.moneymanager.domain.model.Transaction
-import com.example.moneymanager.domain.model.TransactionType
 import com.example.moneymanager.presentation.components.BottomNavBar
 import com.example.moneymanager.presentation.components.BubbleBackground
-import com.example.moneymanager.presentation.components.TransactionItem
-import com.example.moneymanager.presentation.model.Transaction as PresentationTransaction
+import com.example.moneymanager.data.local.entity.TransactionEntity
+import com.example.moneymanager.data.local.entity.TransactionType
 import com.example.moneymanager.presentation.screens.expense.AddExpenseDialog
 import com.example.moneymanager.presentation.theme.Primary
 import com.example.moneymanager.util.BudgetMock
@@ -63,7 +61,7 @@ fun HomeScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "添加交易",
+                    contentDescription = "新增交易紀錄",
                     tint = Color.White
                 )
             }
@@ -164,7 +162,7 @@ fun HomeScreen(
             
             // 最近交易列表
             items(uiState.recentTransactions) { transaction ->
-                TransactionItem(transaction = transaction)
+                HomeTransactionItem(transaction = transaction)
             }
             
             item {
@@ -181,9 +179,9 @@ fun HomeScreen(
 
 @Composable
 private fun BalanceCard(
-    totalBalance: Double,
-    monthlyIncome: Double,
-    monthlyExpense: Double
+    totalBalance: Int,
+    monthlyIncome: Int,
+    monthlyExpense: Int
 ) {
     Card(
         modifier = Modifier
@@ -203,7 +201,7 @@ private fun BalanceCard(
             )
             
             Text(
-                text = "¥ ${formatNumber(totalBalance)}",
+                text = "¥ $totalBalance",
                 color = Color.White,
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
@@ -222,7 +220,7 @@ private fun BalanceCard(
                         fontSize = 12.sp
                     )
                     Text(
-                        text = "¥ ${formatNumber(monthlyIncome)}",
+                        text = "¥ $monthlyIncome",
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
@@ -235,7 +233,7 @@ private fun BalanceCard(
                         fontSize = 12.sp
                     )
                     Text(
-                        text = "¥ ${formatNumber(monthlyExpense)}",
+                        text = "¥ $monthlyExpense",
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
@@ -247,7 +245,7 @@ private fun BalanceCard(
 }
 
 @Composable
-private fun RecentTransactionsCard(transactions: List<Transaction>) {
+private fun RecentTransactionsCard(transactions: List<TransactionEntity>) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -265,7 +263,7 @@ private fun RecentTransactionsCard(transactions: List<Transaction>) {
             Spacer(modifier = Modifier.height(16.dp))
             
             transactions.forEach { transaction ->
-                TransactionItem(transaction = transaction)
+                HomeTransactionItem(transaction = transaction)
                 if (transaction != transactions.last()) {
                     Divider(modifier = Modifier.padding(vertical = 8.dp))
                 }
@@ -275,14 +273,14 @@ private fun RecentTransactionsCard(transactions: List<Transaction>) {
 }
 
 @Composable
-private fun TransactionItem(transaction: Transaction) {
+private fun HomeTransactionItem(transaction: TransactionEntity) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = transaction.description,
+                text = transaction.title,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )
@@ -293,13 +291,15 @@ private fun TransactionItem(transaction: Transaction) {
             )
         }
         Text(
-            text = when (transaction.type) {
+            text = when (transaction.getTransactionType()) {
                 TransactionType.INCOME -> "+¥ ${formatNumber(transaction.amount)}"
                 TransactionType.EXPENSE -> "-¥ ${formatNumber(transaction.amount)}"
+                TransactionType.TRANSFER -> "~¥ ${formatNumber(transaction.amount)}"
             },
-            color = when (transaction.type) {
+            color = when (transaction.getTransactionType()) {
                 TransactionType.INCOME -> Color(0xFF40c057)
                 TransactionType.EXPENSE -> Color(0xFFfa5252)
+                TransactionType.TRANSFER -> Color(0xFF339af0)
             },
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium
@@ -353,7 +353,7 @@ private fun BudgetItem(budget: BudgetMock) {
         }
         
         Spacer(modifier = Modifier.height(4.dp))
-        
+
         LinearProgressIndicator(
             progress = (budget.spent / budget.limit).toFloat(),
             modifier = Modifier
@@ -363,9 +363,21 @@ private fun BudgetItem(budget: BudgetMock) {
                 budget.spent >= budget.limit -> Color(0xFFfa5252)
                 budget.spent >= budget.limit * 0.8 -> Color(0xFFfcc419)
                 else -> MaterialTheme.colorScheme.primary
-            }
+            },
         )
     }
+}
+
+
+@Composable
+@Preview
+fun Previews(){
+    BalanceCard(
+        monthlyExpense = 100,
+        monthlyIncome = 200,
+        totalBalance = 2000,
+    )
+
 }
 
 private fun formatNumber(number: Double): String {
@@ -373,6 +385,6 @@ private fun formatNumber(number: Double): String {
 }
 
 private fun formatCurrency(amount: Double): String {
-    val format = NumberFormat.getCurrencyInstance(Locale.CHINA)
+    val format = NumberFormat.getCurrencyInstance(Locale.TAIWAN)
     return format.format(amount)
 } 

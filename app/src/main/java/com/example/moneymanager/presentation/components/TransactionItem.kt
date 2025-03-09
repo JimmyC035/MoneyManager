@@ -23,14 +23,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.moneymanager.presentation.model.Transaction
-import com.example.moneymanager.presentation.model.TransactionType
+import com.example.moneymanager.data.local.entity.TransactionEntity
+import com.example.moneymanager.data.local.entity.TransactionType
 import com.example.moneymanager.presentation.theme.Error
 import com.example.moneymanager.presentation.theme.Success
 
 @Composable
 fun TransactionItem(
-    transaction: Transaction,
+    transaction: TransactionEntity,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
@@ -58,13 +58,13 @@ fun TransactionItem(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(getCategoryColor(transaction.type).copy(alpha = 0.1f)),
+                    .background(getCategoryColor(transaction.getTransactionType()).copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = getCategoryIcon(transaction.category),
                     contentDescription = transaction.category,
-                    tint = getCategoryColor(transaction.type),
+                    tint = getCategoryColor(transaction.getTransactionType()),
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -84,7 +84,7 @@ fun TransactionItem(
                 Spacer(modifier = Modifier.height(4.dp))
                 
                 Text(
-                    text = transaction.date,
+                    text = transaction.getFormattedDate(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
@@ -92,10 +92,10 @@ fun TransactionItem(
             
             // 交易金額
             Text(
-                text = formatAmount(transaction.amount, transaction.type),
+                text = formatAmount(transaction.amount, transaction.getTransactionType()),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
-                color = if (transaction.type == TransactionType.EXPENSE) Error else Success
+                color = if (transaction.getTransactionType() == TransactionType.EXPENSE) Error else Success
             )
         }
     }

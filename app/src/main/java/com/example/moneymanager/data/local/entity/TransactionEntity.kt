@@ -5,32 +5,48 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 
 @Entity(tableName = "transactions")
-@TypeConverters(TransactionConverters::class)
-data class Transaction(
+@TypeConverters(UriConverters::class)
+data class TransactionEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    val title: String,
     val amount: Double,
     val category: String,
+    val type: String, // "INCOME", "EXPENSE", "TRANSFER"
     val date: Date,
-    val note: String,
+    val note: String = "",
     val imageUri: String? = null,
     val createdAt: Date = Date()
-)
-
-class TransactionConverters {
-    @TypeConverter
-    fun fromTimestamp(value: Long?): Date? {
-        return value?.let { Date(it) }
-    }
-
-    @TypeConverter
-    fun dateToTimestamp(date: Date?): Long? {
-        return date?.time
+) {
+    // 用於 UI 顯示的輔助屬性和方法
+    
+    // 獲取格式化的日期字符串
+    fun getFormattedDate(): String {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        return dateFormat.format(date)
     }
     
+    // 獲取交易類型的枚舉值
+    fun getTransactionType(): TransactionType {
+        return TransactionType.valueOf(type)
+    }
+    
+    // 獲取描述（與 note 相同）
+    val description: String
+        get() = note
+}
+
+// 將 TransactionType 移到這裡，使其可以在整個應用中使用
+enum class TransactionType {
+    INCOME, EXPENSE, TRANSFER
+}
+
+class UriConverters {
     @TypeConverter
     fun fromString(value: String?): Uri? {
         return value?.let { Uri.parse(it) }

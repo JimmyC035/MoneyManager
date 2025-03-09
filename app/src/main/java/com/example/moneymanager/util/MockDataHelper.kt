@@ -1,33 +1,41 @@
 package com.example.moneymanager.util
 
-import com.example.moneymanager.domain.model.Transaction
-import com.example.moneymanager.domain.model.TransactionType
+import com.example.moneymanager.data.local.entity.TransactionEntity
+import com.example.moneymanager.data.local.entity.TransactionType
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 import kotlin.random.Random
 
 object MockDataHelper {
-    fun getMockTransactions(): List<Transaction> {
+    fun getMockTransactions(): List<TransactionEntity> {
         return listOf(
-            Transaction(
+            TransactionEntity(
+                id = 1,
+                title = "月薪",
                 amount = 8500.0,
-                type = TransactionType.INCOME,
+                date = Date(),
                 category = "工資",
-                description = "月薪",
-                date = Date()
+                type = TransactionType.INCOME.name,
+                note = "月薪"
             ),
-            Transaction(
+            TransactionEntity(
+                id = 2,
+                title = "午餐",
                 amount = 45.0,
-                type = TransactionType.EXPENSE,
+                date = Date(),
                 category = "餐飲",
-                description = "午餐",
-                date = Date()
+                type = TransactionType.EXPENSE.name,
+                note = "午餐"
             ),
-            Transaction(
+            TransactionEntity(
+                id = 3,
+                title = "超市購物",
                 amount = 156.80,
-                type = TransactionType.EXPENSE,
+                date = Date(),
                 category = "購物",
-                description = "超市購物",
-                date = Date()
+                type = TransactionType.EXPENSE.name,
+                note = "超市購物"
             )
         )
     }

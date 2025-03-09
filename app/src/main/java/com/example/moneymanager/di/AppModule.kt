@@ -3,7 +3,8 @@ package com.example.moneymanager.di
 import android.content.Context
 import androidx.room.Room
 import com.example.moneymanager.data.local.AppDatabase
-import com.example.moneymanager.data.local.TransactionDao
+import com.example.moneymanager.data.local.dao.TransactionDao
+import com.example.moneymanager.data.local.dao.LoanPlanDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -23,7 +24,7 @@ object AppModule {
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
-            "money_manager_db"
+            AppDatabase.DATABASE_NAME
         ).build()
     }
 
@@ -31,6 +32,12 @@ object AppModule {
     @Singleton
     fun provideTransactionDao(database: AppDatabase): TransactionDao {
         return database.transactionDao()
+    }
+    
+    @Provides
+    @Singleton
+    fun provideLoanPlanDao(database: AppDatabase): LoanPlanDao {
+        return database.loanPlanDao()
     }
 
     @Provides

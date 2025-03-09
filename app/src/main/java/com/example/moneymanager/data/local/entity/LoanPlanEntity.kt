@@ -11,6 +11,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
 @Entity(tableName = "loan_plans")
+@TypeConverters(LoanConverters::class)
 data class LoanPlanEntity(
     @PrimaryKey val id: String,
     val name: String,
@@ -29,7 +30,7 @@ data class LoanPlanEntity(
     val remainingPeriods: Int
 )
 
-class Converters {
+class LoanConverters {
     private val gson = Gson()
     
     @TypeConverter
