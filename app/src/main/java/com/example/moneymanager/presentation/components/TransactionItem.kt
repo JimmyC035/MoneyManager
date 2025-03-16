@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
@@ -29,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -67,8 +69,10 @@ fun TransactionItem(
     val offsetXAnim = remember { Animatable(0f) }
     val deleteButtonWidth = 80.dp
     val deleteButtonWidthPx = with(density) { deleteButtonWidth.toPx() }
-    // 當偏移超過 icon 寬度一半時顯示刪除按鈕
-    val isDeleteVisible = offsetXAnim.value < -deleteButtonWidthPx / 2
+    val isDeleteVisible = offsetXAnim.value != 0f
+    var cardHeightPx by remember { mutableStateOf(0) }
+    val resetSwipeTrigger = remember { mutableStateOf(0) }
+
 
     // 判斷此卡片是否為目前滑動的那一個
     val isCurrentlySwipedItem = CurrentlySwipedItemId.value == transaction.id
@@ -84,13 +88,16 @@ fun TransactionItem(
         modifier = modifier.fillMaxWidth())
     {
         // 刪除按鈕
-        if (showSwipeToDelete && isDeleteVisible) {
+        if (showSwipeToDelete && isDeleteVisible && !expanded) {
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .height(72.dp)
+                    .height(with(density) { cardHeightPx.toDp() })
                     .width(deleteButtonWidth)
-                    .background(Color.Red, shape = RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp))
+                    .background(
+                        Color.Red,
+                        shape = RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)
+                    )
                     .clickable {
                         try {
                             context.vibrate()
@@ -117,36 +124,38 @@ fun TransactionItem(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset(x = offsetXAnim.value.dp)
+                .offset(x = with(LocalDensity.current) { offsetXAnim.value.toDp() })
+                .onGloballyPositioned { coordinates ->
+                    cardHeightPx = coordinates.size.height
+                }
                 .then(
-                    if (showSwipeToDelete) {
+                    if (showSwipeToDelete && !expanded) {
                         Modifier.draggable(
                             orientation = Orientation.Horizontal,
                             state = rememberDraggableState { delta ->
-                                if (isCurrentlySwipedItem || CurrentlySwipedItemId.value == null) {
-                                    // 當首次向左滑動時設定當前項目
-                                    if (CurrentlySwipedItemId.value == null && delta < 0) {
-                                        CurrentlySwipedItemId.value = transaction.id
+                                // 當首次向左滑動時設定當前項目
+                                if (!isCurrentlySwipedItem && delta < 0) {
+                                    CurrentlySwipedItemId.value = transaction.id
+                                }
+
+                                val slowedDelta = delta * 0.5f
+
+                                if (slowedDelta < 0) {
+                                    // 限制向左拖動的最大距離不超過 deleteButtonWidthPx
+                                    val newOffset = (offsetXAnim.value + slowedDelta)
+                                        .coerceIn(-deleteButtonWidthPx, 0f)
+                                    coroutineScope.launch {
+                                        offsetXAnim.snapTo(newOffset)
                                     }
-
-                                    val slowedDelta = delta * 0.5f
-
-                                    if (slowedDelta < 0) {
-                                        // 限制向左拖動的最大距離不超過 deleteButtonWidthPx
-                                        val newOffset = (offsetXAnim.value + slowedDelta)
-                                            .coerceIn(-deleteButtonWidthPx, 0f)
-                                        coroutineScope.launch {
-                                            offsetXAnim.snapTo(newOffset)
-                                        }
-                                    } else if (offsetXAnim.value < 0) {
-                                        // 向右回彈，但不超過 0
-                                        val newOffset = (offsetXAnim.value + slowedDelta)
-                                            .coerceAtMost(0f)
-                                        coroutineScope.launch {
-                                            offsetXAnim.snapTo(newOffset)
-                                        }
+                                } else if (offsetXAnim.value < 0) {
+                                    // 向右回彈，但不超過 0
+                                    val newOffset = (offsetXAnim.value + slowedDelta)
+                                        .coerceAtMost(0f)
+                                    coroutineScope.launch {
+                                        offsetXAnim.snapTo(newOffset)
                                     }
                                 }
+
                             },
                             onDragStopped = {
                                 if (offsetXAnim.value > -deleteButtonWidthPx / 2) {
@@ -171,6 +180,9 @@ fun TransactionItem(
                     } else Modifier
                 )
                 .clickable {
+                    if (!isCurrentlySwipedItem) {
+                        CurrentlySwipedItemId.value = null
+                    }
                     if (offsetXAnim.value == 0f) {
                         expanded = !expanded
                     } else {
@@ -200,7 +212,11 @@ fun TransactionItem(
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(getCategoryColor(transaction.getTransactionType()).copy(alpha = 0.1f)),
+                            .background(
+                                getCategoryColor(transaction.getTransactionType()).copy(
+                                    alpha = 0.1f
+                                )
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
