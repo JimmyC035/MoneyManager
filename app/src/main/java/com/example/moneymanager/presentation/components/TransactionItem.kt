@@ -53,15 +53,14 @@ fun TransactionItem(
         id = transaction.id,
         showSwipeToDelete = showSwipeToDelete,
         deleteButtonWidth = 80.dp,
-        onDelete = { onDelete(transaction) }
+        onDelete = { onDelete(transaction) },
+        onItemClick = {
+            expanded = !expanded
+
+        }
     ) {
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable {
-                    // 當內容點擊時，如果已展開則收合；否則展開
-                    expanded = !expanded
-                },
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)

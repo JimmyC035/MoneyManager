@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -47,6 +48,7 @@ fun SwipeableItem(
     showSwipeToDelete: Boolean = true,
     deleteButtonWidth: Dp = 80.dp,
     onDelete: () -> Unit,
+    onItemClick: ()-> Unit,
     content: @Composable () -> Unit
 ) {
     val density = LocalDensity.current
@@ -56,7 +58,7 @@ fun SwipeableItem(
     val offsetXAnim = remember { Animatable(0f) }
     val deleteButtonWidthPx = with(density) { deleteButtonWidth.toPx() }
     // 用來儲存內容高度（單位：px）
-    var contentHeightPx by remember { mutableStateOf(0) }
+    var contentHeightPx by remember { mutableIntStateOf(0) }
 
     val isCurrentlySwipedItem = (CurrentlySwipedItemId.value == id)
 
@@ -137,7 +139,19 @@ fun SwipeableItem(
                             }
                         }
                     }
-                )
+                ).clickable {
+                    if (!isCurrentlySwipedItem) {
+                        CurrentlySwipedItemId.value = null
+                    }
+                    if (offsetXAnim.value != 0f) {
+                        coroutineScope.launch {
+                            offsetXAnim.animateTo(0f, tween(200))
+                            CurrentlySwipedItemId.value = null
+                        }
+                    } else {
+                        onItemClick()
+                    }
+                }
         ) {
             content()
         }
